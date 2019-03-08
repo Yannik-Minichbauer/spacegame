@@ -802,9 +802,10 @@ class Viewer(object):
         # --sounds --
         Viewer.laser1 = pygame.mixer.Sound(os.path.join("data","laser1.wav"))
         Viewer.explosion1 = pygame.mixer.Sound(os.path.join("data","explosion1.wav"))
+        Viewer.pickup1 = pygame.mixer.Sound(os.path.join("data","pickup.wav"))
         Viewer.explosion1.set_volume(1.0)
         Viewer.laser1.set_volume(0.1)
-        
+        Viewer.pickup1.set_volume(0.5)
         
         
         #-- music--
@@ -1228,14 +1229,20 @@ class Viewer(object):
                         p.hitpoints+=100
                         r = 255
                         g = 100
+                        if self.sound:
+                            Viewer.pickup1.play()
                     elif name == "powerup2":
                         r = 200
                         p.damage *= 2
                         Flytext(u.pos.x, -u.pos.y, ("Double damage!"))
+                        if self.sound:
+                            Viewer.pickup1.play()
                     elif name == "powerup3":
                         g = 200
                         p.speed += 1
                         Flytext(u.pos.x, -u.pos.y, ("Moving faster now!"))
+                        if self.sound:
+                            Viewer.pickup1.play()
                     Explosion(pygame.math.Vector2(u.pos.x, u.pos.y), red=r, green=g, blue=b, red_delta=rd, green_delta = gd, blue_delta = bd)
                         #elastic_collision(p, u)
                     u.kill()
