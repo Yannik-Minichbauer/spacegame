@@ -1,7 +1,6 @@
 """
-author: Horst JENS
-email: horstjens@gmail.com
-contact: see http://spielend-programmieren.at/de:kontakt
+author: Yannik MINICHBAUER
+email: yannik.minichbauer@gmail.com
 license: gpl, see http://www.gnu.org/licenses/gpl-3.0.de.html
 download: 
 idea: clean python3/pygame template using pygame.math.vector2
@@ -384,7 +383,7 @@ class VectorSprite(pygame.sprite.Sprite):
                 l = v.length()
                 v.normalize_ip() # has now lenght of 1
                 #print("vector", v)
-                v *= 1000/l
+                v *= 600/l
                 self.move += v 
         self.distance_traveled += self.move.length() * seconds
         self.age += seconds
@@ -749,7 +748,7 @@ class Viewer(object):
         self.fps = fps
         self.playtime = 0.0
         Viewer.sound=True
-        Viewer.gravity = False
+        Viewer.gravity = True
         Viewer.powerups = True
         # ------ background images ------
         self.backgroundfilenames = [] # every .jpg file in folder 'data'
@@ -817,9 +816,9 @@ class Viewer(object):
     def load_sprites(self):
         #try:
         Viewer.images["player1"]= pygame.image.load(
-             os.path.join("data", "player1.png"))
+             os.path.join("data", "player3.png"))
         Viewer.images["player2"]=pygame.image.load(
-             os.path.join("data", "player2.png"))
+             os.path.join("data", "player4.png"))
         Viewer.images["bullet"]= pygame.image.load(
              os.path.join("data", "bullet.png"))
         Viewer.images["bullet2"]= pygame.image.load(
@@ -847,7 +846,7 @@ class Viewer(object):
         for name in Viewer.images:
             if "player" in name:
                  img = Viewer.images[name]
-                 img = pygame.transform.scale(img, (50,50))
+                 img = pygame.transform.scale(img, (80,50))
                  Viewer.images[name] = img
             if "muzzle_flash" in name:
                  img = Viewer.images[name]
@@ -990,18 +989,18 @@ class Viewer(object):
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Sound is {}".format(status), 68, 120, (115,211,49), fontsize =18)
+                write(self.screen, "Sound is {}".format(status), 68, 130, (115,240,49), fontsize =20)
                 # gravity
                 if Viewer.gravity:
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Gravity is {}".format(status), 68, 80, (115,211,49), fontsize=18)
+                write(self.screen, "Gravity is {}".format(status), 68, 70, (115,240,49), fontsize=20)
                 if Viewer.powerups:
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Powerups are {}".format(status), 68, 100, (115,211,49), fontsize=18)
+                write(self.screen, "Powerups are {}".format(status), 68, 100, (115,240,49), fontsize=20)
                                   
             #pygame.draw.ellipse(self.screen, (0,255,0), (370 + self.cursorpos * 200, 183, 200, 50), 1) 
             # ------ mouse handler ------
@@ -1093,7 +1092,11 @@ class Viewer(object):
                             self.player1.reloadtime+= 0.3
                     # ------- fire player 2 ------
                     if event.key == pygame.K_SPACE:
-                        self.player2.fire()
+                        if self.player2.reloadtime <= 0:
+                            self.player2.fire()
+                            self.player2.reloadtime += 0.3
+                        
+                        #self.player2.fire()
                     # ---- menu ---
                     if event.key == pygame.K_m:
                         self.menurun()   
@@ -1124,22 +1127,23 @@ class Viewer(object):
                 self.player1.move_forward()
             if pressed_keys[pygame.K_s]:
                 self.player1.move_backward()
-            # ------- movement keys for player 2 ---------
-            #if pressed_keys[pygame.K_j]:
-            #     self.player2.turn_left()
-            #if pressed_keys[pygame.K_l]:
-            #     self.player2.turn_right()
-            #if pressed_keys[pygame.K_i]:
-            #     self.player2.move_forward()
-            #if pressed_keys[pygame.K_k]:
-            #     self.player2.move_backward()  
-            vm = pygame.math.Vector2(pygame.mouse.get_pos()[0], 
-                                     -pygame.mouse.get_pos()[1])
-            v1 = pygame.math.Vector2(100,0)
-            diff = vm - self.player2.pos 
-            angle = diff.angle_to(v1)
-            self.player2.set_angle(-angle)
-            print(vm, v1,  self.player2.pos, self.player2.angle)
+                
+            #------- movement keys for player 2 ---------
+            if pressed_keys[pygame.K_j]:
+                 self.player2.turn_left()
+            if pressed_keys[pygame.K_l]:
+                 self.player2.turn_right()
+            if pressed_keys[pygame.K_i]:
+                 self.player2.move_forward()
+            if pressed_keys[pygame.K_k]:
+                 self.player2.move_backward()  
+            #vm = pygame.math.Vector2(pygame.mouse.get_pos()[0], 
+            #                         -pygame.mouse.get_pos()[1])
+            #v1 = pygame.math.Vector2(100,0)
+            #diff = vm - self.player2.pos 
+            #angle = diff.angle_to(v1)
+            #self.player2.set_angle(-angle)
+            #print(vm, v1,  self.player2.pos, self.player2.angle)
             #pygame.draw.line(self.screen,(200, 0, 0),(0,0), pygame.mouse.get_pos())
             #pygame.draw.line(self.screen,(200, 0, 0),(0,0), (self.player2.pos.x,-self.player2.pos.y))
             
@@ -1194,7 +1198,7 @@ class Viewer(object):
                 self.clock.get_fps() ), x=10, y=10)
                 
             # ------ chance for random powerup ------
-            if random.random() < 0.0008:
+            if Viewer.powerups and random.random() < 0.008:
                 m=pygame.math.Vector2(100,0)
                 m.rotate_ip(random.randint(0,360))
                 Powerup(bounce_on_edge = True, move=m)
@@ -1286,8 +1290,9 @@ class Viewer(object):
             
             
             
-            for r in self.rocketgroup:
-                r.gravity=[self.planet, self.planet2]
+            if Viewer.gravity:
+                for r in self.rocketgroup:
+                    r.gravity=[self.planet, self.planet2]
             
             
             # -------------- UPDATE all sprites -------             
