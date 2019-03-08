@@ -916,8 +916,8 @@ class Viewer(object):
         self.settingmenu = ["  Gravity "," Powerups ","   Sound  ","   Back   "]
         self.menuitems = self.topmenu[:] # copy
         while running:
-            pygame.display.set_caption("player1 hp: {} player2 hp: {}".format(
-                                 self.player1.hitpoints, self.player2.hitpoints))
+            pygame.display.set_caption("player1 hp: {} player2 hp: {}  FPS: {}".format(
+                                 self.player1.hitpoints, self.player2.hitpoints, self.clock.get_fps()))
             milliseconds = self.clock.tick(self.fps) #
             seconds = milliseconds / 1000
             #self.playtime += seconds
@@ -1007,22 +1007,13 @@ class Viewer(object):
             left,middle,right = pygame.mouse.get_pressed()
             oldleft, oldmiddle, oldright = left, middle, right
             
-            if middle:
-                if self.player2.reloadtime <= 0:
-                    self.player2.fire()
-                    self.player2.reloadtime = 0.5
-            if left:
-                self.player2.move_forward()
-            if right:
-                self.player2.strafe_right()
-            
-                
+          
               
                        
                        
             # write text below sprites
-            write(self.screen, "FPS: {:8.3}".format(
-                self.clock.get_fps() ), x=10, y=10)
+            #write(self.screen, "FPS: {:8.3}".format(
+            #    self.clock.get_fps() ), x=10, y=10)
                 
             
             
@@ -1030,7 +1021,7 @@ class Viewer(object):
             self.flytextgroup.update(seconds)
 
             # ----------- clear, draw , update, flip -----------------
-            self.allgroup.draw(self.screen)
+            self.flytextgroup.draw(self.screen)
 
             
             # -------- next frame -------------
