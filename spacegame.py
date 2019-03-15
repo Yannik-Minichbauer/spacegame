@@ -275,8 +275,8 @@ class VectorSprite(pygame.sprite.Sprite):
             self.height = self.radius * 2
         
         if "hitpoints" not in kwargs:
-            self.hitpoints = 100
-        self.hitpointsfull = self.hitpoints # makes a copy
+            self.hitpoints = 120
+        self.hitpointsfull = self.hitpoints+0 # makes a copy
         if "mass" not in kwargs:
             self.mass = 10
         if "damage" not in kwargs:
@@ -373,8 +373,14 @@ class VectorSprite(pygame.sprite.Sprite):
         self.pos += self.move * seconds
         # -- friction ---
         self.move *= self.friction 
+        self.calculate_gravity()
+        self.distance_traveled += self.move.length() * seconds
+        self.age += seconds
+        self.wallbounce()
+        self.rect.center = ( round(self.pos.x, 0), -round(self.pos.y, 0) )
+
+    def calculate_gravity(self):
         # -- gravity ---
-        # only one object can be the gravity source
         if self.gravity:   # is not None:
             
             for p in self.gravity:
@@ -385,10 +391,6 @@ class VectorSprite(pygame.sprite.Sprite):
                 #print("vector", v)
                 v *= 600/l
                 self.move += v 
-        self.distance_traveled += self.move.length() * seconds
-        self.age += seconds
-        self.wallbounce()
-        self.rect.center = ( round(self.pos.x, 0), -round(self.pos.y, 0) )
 
     def wallbounce(self):
         # ---- bounce / kill on screen edge ----
@@ -469,6 +471,8 @@ class Spaceship(VectorSprite):
         self.reloadtime = 0
         self.damage = 7
         self.speed = 1
+        self.magnet = 0
+        self.hitpointsfull = 100
     
     def kill(self):
         Explosion(posvector=self.pos, maxlifetime=5, minsparks=250, maxsparks=400)
@@ -504,6 +508,21 @@ class Spaceship(VectorSprite):
                  #c = randomize_color(160, 25)
                  #Smoke(max_age=2.5, pos=v+pygame.math.Vector2(
                  #      self.pos.x, self.pos.y), color=(c,c,c))
+    
+    
+    def calculate_gravity(self):
+        # -- gravity ---
+        if self.gravity:   # is not None:
+            
+            for p in self.gravity:
+                # vector between self and gravity
+                v = p.pos - self.pos
+                l = v.length()
+                v.normalize_ip() # has now lenght of 1
+                #print("vector", v)
+                v *= (10+self.magnet)/l
+                self.move += v 
+    
         
     def strafe_left(self):
         v = pygame.math.Vector2(50, 0)
@@ -583,8 +602,45 @@ class Spaceship(VectorSprite):
         self.image0 = self.image.copy()
         self.rect = self.image.get_rect()
 
-        
-
+    def wallbounce(self):
+        # ---- bounce / kill on screen edge ----
+        # ------- left edge ----
+        if self.pos.x < 55:
+            if self.kill_on_edge:
+                self.kill()
+            elif self.bounce_on_edge:
+                self.pos.x = 0
+                self.move.x *= -1
+            elif self.warp_on_edge:
+                self.pos.x = Viewer.width - 55 
+        # -------- upper edge -----
+        if self.pos.y  > 0:
+            if self.kill_on_edge:
+                self.kill()
+            elif self.bounce_on_edge:
+                self.pos.y = 0
+                self.move.y *= -1
+            elif self.warp_on_edge:
+                self.pos.y = -Viewer.height
+        # -------- right edge -----                
+        if self.pos.x  > Viewer.width -55:
+            if self.kill_on_edge:
+                self.kill()
+            elif self.bounce_on_edge:
+                self.pos.x = Viewer.width
+                self.move.x *= -1
+            elif self.warp_on_edge:
+                self.pos.x = 55
+        # --------- lower edge ------------
+        if self.pos.y   < -Viewer.height:
+            if self.kill_on_edge:
+                self.hitpoints = 0
+                self.kill()
+            elif self.bounce_on_edge:
+                self.pos.y = -Viewer.height
+                self.move.y *= -1
+            elif self.warp_on_edge:
+                self.pos.y = 0
 
 class Smoke(VectorSprite):
 
@@ -679,10 +735,16 @@ class Rocket(VectorSprite):
          #         max_age=2.5)
 
     def create_image(self):
-        if self.bossnumber == 0:
-            self.image = Viewer.images["bullet"]
-        elif self.bossnumber == 1:
-            self.image = Viewer.images["bullet2"]
+        if Viewer.gamemode:
+            if self.bossnumber == 0:
+                self.image = Viewer.images["bullet"]
+            elif self.bossnumber == 1:
+                self.image = Viewer.images["bullet2"]
+        if not Viewer.gamemode:
+            if self.bossnumber == 0:
+                self.image = Viewer.images["bullet3"]
+            elif self.bossnumber == 1:
+                self.image = Viewer.images["bullet3"]
         self.image.convert_alpha()
         self.image0 = self.image.copy()
         self.rect = self.image.get_rect()
@@ -750,6 +812,8 @@ class Viewer(object):
         Viewer.sound=True
         Viewer.gravity = True
         Viewer.powerups = True
+        Viewer.control = True
+        Viewer.gamemode = True
         # ------ background images ------
         self.backgroundfilenames = [] # every .jpg file in folder 'data'
         try:
@@ -840,6 +904,8 @@ class Viewer(object):
              os.path.join("data", "powerup3.png"))
         Viewer.images["menuborder"]=pygame.image.load(
              os.path.join("data", "menuborder.png"))
+        Viewer.images["bullet3"]= pygame.image.load(
+             os.path.join("data", "bullet3.png"))
         #except:
         #    print("problem loading player1.png or player2.png from folder data")
             
@@ -869,7 +935,10 @@ class Viewer(object):
                  img = Viewer.images[name]
                  img = pygame.transform.scale(img, (225, 66))
                  Viewer.images[name] = img
-      
+            if "bullet3" in name:
+                 img = Viewer.images[name]
+                 img = pygame.transform.scale(img, (10,10))
+                 Viewer.images[name] = img
      
     def paint(self):
         """painting on the surface and create sprites"""
@@ -913,11 +982,11 @@ class Viewer(object):
         #pygame.mouse.set_visible(False)
         oldleft, oldmiddle, oldright  = False, False, False
         self.cursorpos = 0
-        self.topmenu=["Start Game", " Settings ", "  Credits "]
-        self.settingmenu = ["  Gravity "," Powerups ","   Sound  ","   Back   "]
+        self.topmenu=["Start Game", " Settings "," Gamemode ", "  Credits "]
+        self.settingmenu = ["  Gravity "," Powerups ","   Sound  "," Control  ","   Back   "]
         self.menuitems = self.topmenu[:] # copy
         while running:
-            pygame.display.set_caption("player1 hp: {} player2 hp: {}  FPS: {}".format(
+            pygame.display.set_caption("player1 hp: {} player2 hp: {}  FPS: {:8.3}".format(
                                  self.player1.hitpoints, self.player2.hitpoints, self.clock.get_fps()))
             milliseconds = self.clock.tick(self.fps) #
             seconds = milliseconds / 1000
@@ -955,6 +1024,10 @@ class Viewer(object):
                             Viewer.gravity= not Viewer.gravity
                         elif action == " Powerups ":
                             Viewer.powerups= not Viewer.powerups
+                        elif action == " Control  ":
+                            Viewer.control = not Viewer.control
+                        elif action == " Gamemode ":
+                            Viewer.gamemode = not Viewer.gamemode
                             
                     
             
@@ -990,18 +1063,29 @@ class Viewer(object):
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Sound is {}".format(status), 68, 130, (115,240,49), fontsize =20)
+                write(self.screen, "Sound is {}".format(status), 68, 100, (115,240,49), fontsize =20)
                 # gravity
                 if Viewer.gravity:
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Gravity is {}".format(status), 68, 70, (115,240,49), fontsize=20)
+                write(self.screen, "Gravity is {}".format(status), 68, 40, (115,240,49), fontsize=20)
                 if Viewer.powerups:
                     status = "on"
                 else:
                     status = "off"
-                write(self.screen, "Powerups are {}".format(status), 68, 100, (115,240,49), fontsize=20)
+                write(self.screen, "Powerups are {}".format(status), 68, 70, (115,240,49), fontsize=20)
+                if Viewer.control:
+                    write(self.screen, "Player 2: Mouse", 68, 160, (115,240,49), fontsize=20)
+                    write(self.screen, "Player 2: Keyboard", 68, 130, (115,240,49), fontsize=20)
+                if not Viewer.control:
+                    write(self.screen, "Player 2: Keyboard", 68, 160, (115,240,49), fontsize=20)
+                    write(self.screen, "Player 2: Keyboard", 68, 130, (115,240,49), fontsize=20)
+            if self.menuitems == self.topmenu[:]:
+                if Viewer.gamemode:
+                    write(self.screen, "Gamemode: Normal", 68, 40, (115,240,49), fontsize=20)
+                if not Viewer.gamemode:
+                    write(self.screen, "Gamemode: Ultra Garvity", 68, 40, (115,240,49), fontsize=20)
                                   
             #pygame.draw.ellipse(self.screen, (0,255,0), (370 + self.cursorpos * 200, 183, 200, 50), 1) 
             # ------ mouse handler ------
@@ -1065,17 +1149,17 @@ class Viewer(object):
                     if event.key == pygame.K_b:
                         self.loadbackground()
                     # ------- strafe left player 1 -------
-                    if event.key == pygame.K_q:
-                        self.player1.strafe_left()
+                    #if event.key == pygame.K_q:
+                    #    self.player1.strafe_left()
                     # ------- strafe right player 1 ------
-                    if event.key == pygame.K_e:
-                        self.player1.strafe_right()
+                    #if event.key == pygame.K_e:
+                    #    self.player1.strafe_right()
                     # ------- strafe left player 2 -------
-                    if event.key == pygame.K_u:
-                        self.player2.strafe_left()
+                    #if event.key == pygame.K_u:
+                    #    self.player2.strafe_left()
                     # ------- strafe right player 2 ------
-                    if event.key == pygame.K_o:
-                        self.player2.strafe_right()
+                    #if event.key == pygame.K_o:
+                    #    self.player2.strafe_right()
                     
                     # ------- fire player 1 -----
                     if event.key == pygame.K_TAB:
@@ -1083,10 +1167,11 @@ class Viewer(object):
                             self.player1.fire()
                             self.player1.reloadtime+= 0.3
                     # ------- fire player 2 ------
-                    if event.key == pygame.K_SPACE:
-                        if self.player2.reloadtime <= 0:
-                            self.player2.fire()
-                            self.player2.reloadtime += 0.3
+                    if not Viewer.control:
+                        if event.key == pygame.K_SPACE:
+                            if self.player2.reloadtime <= 0:
+                                self.player2.fire()
+                                self.player2.reloadtime += 0.3
                         
                         #self.player2.fire()
                     # ---- menu ---
@@ -1121,20 +1206,22 @@ class Viewer(object):
                 self.player1.move_backward()
                 
             #------- movement keys for player 2 ---------
-            if pressed_keys[pygame.K_j]:
-                 self.player2.turn_left()
-            if pressed_keys[pygame.K_l]:
-                 self.player2.turn_right()
-            if pressed_keys[pygame.K_i]:
-                 self.player2.move_forward()
-            if pressed_keys[pygame.K_k]:
-                 self.player2.move_backward()  
-            #vm = pygame.math.Vector2(pygame.mouse.get_pos()[0], 
-            #                         -pygame.mouse.get_pos()[1])
-            #v1 = pygame.math.Vector2(100,0)
-            #diff = vm - self.player2.pos 
-            #angle = diff.angle_to(v1)
-            #self.player2.set_angle(-angle)
+            if not Viewer.control:
+                if pressed_keys[pygame.K_j]:
+                     self.player2.turn_left()
+                if pressed_keys[pygame.K_l]:
+                     self.player2.turn_right()
+                if pressed_keys[pygame.K_i]:
+                     self.player2.move_forward()
+                if pressed_keys[pygame.K_k]:
+                     self.player2.move_backward()
+            if self.control:  
+                vm = pygame.math.Vector2(pygame.mouse.get_pos()[0], 
+                                         -pygame.mouse.get_pos()[1])
+                v1 = pygame.math.Vector2(100,0)
+                diff = vm - self.player2.pos 
+                angle = diff.angle_to(v1)
+                self.player2.set_angle(-angle)
             #print(vm, v1,  self.player2.pos, self.player2.angle)
             #pygame.draw.line(self.screen,(200, 0, 0),(0,0), pygame.mouse.get_pos())
             #pygame.draw.line(self.screen,(200, 0, 0),(0,0), (self.player2.pos.x,-self.player2.pos.y))
@@ -1144,15 +1231,16 @@ class Viewer(object):
             # ------ mouse handler ------
             left,middle,right = pygame.mouse.get_pressed()
             oldleft, oldmiddle, oldright = left, middle, right
+            if Viewer.control:
             
-            if middle:
-                if self.player2.reloadtime <= 0:
-                    self.player2.fire()
-                    self.player2.reloadtime = 0.5
-            if left:
-                self.player2.move_forward()
-            if right:
-                self.player2.strafe_right()
+                if middle:
+                    if self.player2.reloadtime <= 0:
+                        self.player2.fire()
+                        self.player2.reloadtime = 0.5
+                if left:
+                    self.player2.move_forward()
+                #if right:
+                #    self.player2.strafe_right()
             # ------ joystick handler -------
             for number, j in enumerate(self.joysticks):
                 if number == 0:
@@ -1186,8 +1274,8 @@ class Viewer(object):
                        
                        
             # write text below sprites
-            write(self.screen, "FPS: {:8.3}".format(
-                self.clock.get_fps() ), x=10, y=10)
+            #write(self.screen, "FPS: {:8.3}".format(
+            #    self.clock.get_fps() ), x=10, y=10)
                 
             # ------ chance for random powerup ------
             if Viewer.powerups and random.random() < 0.008:
@@ -1203,12 +1291,18 @@ class Viewer(object):
                              False, pygame.sprite.collide_mask)
                 for r in crashgroup:
                     if r.bossnumber != p.number:
-                        if self.sound:
-                            Viewer.explosion1.play()
-                        p.hitpoints -= r.damage
-                        Explosion(pygame.math.Vector2(r.pos.x, r.pos.y))
-                        elastic_collision(p, r)
-                        r.kill()
+                        if Viewer.gamemode:
+                            if self.sound:
+                                Viewer.explosion1.play()
+                            p.hitpoints -= r.damage
+                            Explosion(pygame.math.Vector2(r.pos.x, r.pos.y))
+                            elastic_collision(p, r)
+                            r.kill()
+                        if not Viewer.gamemode:
+                            p.magnet += 50
+                            Explosion(pygame.math.Vector2(r.pos.x, r.pos.y))
+                            elastic_collision(p, r)
+                            r.kill()
             # ----- collision detection between player and powerup----
             for p in self.playergroup:
                 crashgroup = pygame.sprite.spritecollide(p, self.powerupgroup,
@@ -1285,17 +1379,63 @@ class Viewer(object):
                              False, pygame.sprite.collide_mask)
                 for p2 in crashgroup:
                     elastic_collision(p, p2)
+                    p2.hitpoints-= 10
             
-            
-            
+            #-------------- collision detection betwen powerup and planet -----#
+            for r in self.rocketgroup:
+                crashgroup = pygame.sprite.spritecollide(r, self.powerupgroup,
+                             False, pygame.sprite.collide_mask)
+                for u in crashgroup:
+                    u.kill()
+                    
+             #-------------- collision detection betwen powerup and planet -----#
+            for p in self.planetgroup:
+                crashgroup = pygame.sprite.spritecollide(p, self.powerupgroup,
+                             False, pygame.sprite.collide_mask)
+                for u in crashgroup:
+                    elastic_collision(p,u)
+                    
+                    
             if Viewer.gravity:
+                # gravity for rockets
                 for r in self.rocketgroup:
                     r.gravity=[self.planet, self.planet2]
+                    
+            if not Viewer.gamemode:
+                # gravity for spaceships
+                for s in self.playergroup:
+                    s.gravity = [self.planet, self.planet2]
             
             
             # -------------- UPDATE all sprites -------             
             self.allgroup.update(seconds)
 
+
+            # ------ paint hitpoints and magnet bars ----
+            # ----- hitpoints 
+            for p in self.playergroup:
+                 hph = Viewer.height // p.hitpointsfull
+                 if p.number == 0:
+                     x = 0
+                 else:
+                     x = Viewer.width - 40
+                 # big rect
+                 #print("vh", Viewer.height, p.hitpointsfull, p.hitpoints, hph)
+                 pygame.draw.rect(self.screen, (100,100,100), (x,0, 40, Viewer.height))
+                 # little hp rect inside
+                 pygame.draw.rect(self.screen, (97,238,34), (x+5, Viewer.height - (p.hitpoints * hph),30, p.hitpoints * hph)) 
+                 
+            # paint magnet
+            if not Viewer.gamemode:
+              for p in self.playergroup:
+                if p.number == 0:
+                    x = 41
+                else:
+                    x = Viewer.width- 40 - 15
+                mh = 2
+                pygame.draw.rect(self.screen, (200,200,200), (x,0,15, Viewer.height))
+                pygame.draw.rect(self.screen, (200,20,200), (x+2,Viewer.height - (p.magnet * mh), 11, p.magnet*mh))
+                 
             # ----------- clear, draw , update, flip -----------------
             self.allgroup.draw(self.screen)
 
