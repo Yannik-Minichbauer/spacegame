@@ -972,8 +972,8 @@ class Viewer(object):
 
         self.player1 =  Spaceship(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         self.player2 =  Spaceship(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+450,-Viewer.height/2-250))
-        self.planet = Planet(imagename="planet1", pos=pygame.math.Vector2(300, -300))
-        self.planet2 = Planet(imagename="planet2", pos=pygame.math.Vector2(900, -600))
+        self.planet = Planet(imagename="planet1", pos=pygame.math.Vector2(300, -350))
+        self.planet2 = Planet(imagename="planet2", pos=pygame.math.Vector2(900, -550))
         #self.powerup1 = Powerup(imagename = "powerup1", warp_on_edge = True)
     
     def menurun(self):
@@ -1456,4 +1456,4 @@ class Viewer(object):
         pygame.quit()
 
 if __name__ == '__main__':
-    Viewer(1430,800).run() # try Viewer(800,600).run()
+    Viewer(1380,800).run() # try Viewer(800,600).run()
