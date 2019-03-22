@@ -454,7 +454,10 @@ class Powerup(VectorSprite):
         def create_image(self):
             
             if Viewer.powerups:
-                self.imagename = random.choice(("powerup1", "powerup2", "powerup3"))   
+                if Viewer.gamemode:
+                    self.imagename = random.choice(("powerup1", "powerup2", "powerup3"))  
+                if not Viewer.gamemode:
+                    self.imagename = random.choice(("powerup1","powerup3")) 
                 self.image = Viewer.images[self.imagename]
                 self.image.set_colorkey((0,0,0))
                 self.image.convert_alpha()
@@ -795,6 +798,12 @@ class Viewer(object):
     width = 0
     height = 0
     images = {}
+    slides = {}
+    language = "en"
+    
+    slidetext = {"en": ["The green pillar shows the hitpoints your player has left", "Use Tab and left mouse button to shoot", "Your shots are affected by the gravitation", "Collect Powerups to get advantages", "Use w,a,s,d and middle mouse button to move your players"],
+                 "de": ["Die grüne Säule zeigt die Lebenspunkte deines Spielers", "Verwende Tab und die linke Maustaste um zu schießen", "Die Schüsse werden von der Gravitation beeinträchtigt", "Sammle Powerups ein um Vorteile zu bekommen", "Verwendet w,a,s,d und das Mausrad um die Spieler zu bewegen"],
+                }
 
     def __init__(self, width=640, height=400, fps=60):
         """Initialize pygame, window, background, font,...
@@ -939,7 +948,14 @@ class Viewer(object):
                  img = Viewer.images[name]
                  img = pygame.transform.scale(img, (10,10))
                  Viewer.images[name] = img
-     
+        
+        for name in ("1.png", "2.png", "3.png","4.png","5.png"):
+            img = pygame.image.load(os.path.join("data", name))
+            img = pygame.transform.scale(img, ( Viewer.width//2, Viewer.height - 400))
+            img.convert()
+            Viewer.slides[name] = img
+            
+         
     def paint(self):
         """painting on the surface and create sprites"""
         self.load_sprites()
@@ -985,12 +1001,15 @@ class Viewer(object):
         self.topmenu=["Start Game", " Settings "," Gamemode ", "  Credits "]
         self.settingmenu = ["  Gravity "," Powerups ","   Sound  "," Control  ","   Back   "]
         self.menuitems = self.topmenu[:] # copy
+        self.showslide = True
+        self.slide_index = 0
         while running:
             pygame.display.set_caption("player1 hp: {} player2 hp: {}  FPS: {:8.3}".format(
                                  self.player1.hitpoints, self.player2.hitpoints, self.clock.get_fps()))
             milliseconds = self.clock.tick(self.fps) #
             seconds = milliseconds / 1000
             #self.playtime += seconds
+            
             
             # -------- events ------
             for event in pygame.event.get():
@@ -1008,6 +1027,13 @@ class Viewer(object):
                         self.cursorpos -= 1
                         if self.cursorpos<0: 
                             self.cursorpos=0
+                    if event.key == pygame.K_SPACE:
+                        self.slide_index += 1
+                        if self.slide_index > 4:    # how many slides -1
+                            self.slide_index = 0
+                        
+                        #self.slide = random.choice(("1.png", "2.png", "3.png", "4.png"))
+                        
                     if event.key == pygame.K_RETURN:
                         action = self.menuitems[self.cursorpos]
                         if action == "Start Game":
@@ -1035,6 +1061,16 @@ class Viewer(object):
          
             # ---------delete everything on screen
             self.screen.blit(self.menubackground, (0, 0))
+            
+            slide = list(Viewer.slides.keys())[self.slide_index]
+            print(list(Viewer.slides.keys()))
+            
+            if self.showslide:
+                self.screen.blit(Viewer.slides[slide], (Viewer.width//2, 400))
+                        
+                write(self.screen, Viewer.slidetext["de"][self.slide_index], 10, 350, (255,0,0), fontsize= 30)
+                write(self.screen,"Use space to continue the tutorial", 800, Viewer.height-30, (255,0,0))
+            
             
             write(self.screen, "Menu", 730, 100, color=(255,246,0))
             for x, i in enumerate(self.menuitems):
@@ -1079,13 +1115,13 @@ class Viewer(object):
                     write(self.screen, "Player 2: Mouse", 68, 160, (115,240,49), fontsize=20)
                     write(self.screen, "Player 2: Keyboard", 68, 130, (115,240,49), fontsize=20)
                 if not Viewer.control:
-                    write(self.screen, "Player 2: Keyboard", 68, 160, (115,240,49), fontsize=20)
-                    write(self.screen, "Player 2: Keyboard", 68, 130, (115,240,49), fontsize=20)
+                    write(self.screen, "Player 1: Keyboard", 68, 160, (115,240,49), fontsize=20)
+                    write(self.screen, "Player 1: Keyboard", 68, 130, (115,240,49), fontsize=20)
             if self.menuitems == self.topmenu[:]:
                 if Viewer.gamemode:
                     write(self.screen, "Gamemode: Normal", 68, 40, (115,240,49), fontsize=20)
                 if not Viewer.gamemode:
-                    write(self.screen, "Gamemode: Ultra Garvity", 68, 40, (115,240,49), fontsize=20)
+                    write(self.screen, "Gamemode: Ultra Gravity", 68, 40, (115,240,49), fontsize=20)
                                   
             #pygame.draw.ellipse(self.screen, (0,255,0), (370 + self.cursorpos * 200, 183, 200, 50), 1) 
             # ------ mouse handler ------
